@@ -62,8 +62,12 @@ class User(db.Model):
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
+    content = db.Column(db.JSON, nullable=False)  # Changed to JSON
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reposts = db.Column(db.Integer, default=0) # Added reposts
+    type = db.Column(db.String(50), default='standard_post') # Added type
+    info_icon = db.Column(db.JSON, nullable=True) # Added info_icon
+    answer_input = db.Column(db.JSON, nullable=True) # Added answer_input
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -93,6 +97,10 @@ class Post(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'likes_count': self.get_like_count(),
             'replies_count': self.get_reply_count(),
+            'reposts': self.reposts, # Include reposts
+            'type': self.type, # Include type
+            'info_icon': self.info_icon, # Include info_icon
+            'answer_input': self.answer_input, # Include answer_input
             'is_liked': self.is_liked_by(current_user) if current_user else False
         }
 
@@ -164,4 +172,3 @@ class Notification(db.Model):
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
-

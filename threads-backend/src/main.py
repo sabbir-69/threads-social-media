@@ -12,7 +12,7 @@ app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'sta
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdf#FGSgvasgf$5$WGT')
 
 # Enable CORS for all routes
-CORS(app, origins=['*'])
+CORS(user_bp, origins=['*']) # Apply CORS directly to the blueprint
 
 app.register_blueprint(user_bp, url_prefix='/api')
 

@@ -7,12 +7,15 @@ from flask import Flask, send_from_directory
 from flask_cors import CORS
 from src.models.user import db
 from src.routes.user import user_bp
+from dotenv import load_dotenv
+
+load_dotenv() # Load environment variables from .env file
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'asdf#FGSgvasgf$5$WGT')
 
 # Enable CORS for all routes
-CORS(user_bp, origins=['*']) # Apply CORS directly to the blueprint
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.register_blueprint(user_bp, url_prefix='/api')
 

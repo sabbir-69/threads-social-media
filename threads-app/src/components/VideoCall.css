@@ -1,0 +1,18 @@
+/* VideoCall specific styles */
+.video-call-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: black;
+  z-index: 9999;
+}
+
+.video-call-controls {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10000;
+}
+

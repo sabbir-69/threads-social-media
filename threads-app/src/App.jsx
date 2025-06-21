@@ -414,25 +414,10 @@ const mockUser = {
   username: 'johndoe',
   name: 'John Doe',
   bio: 'Software developer passionate about building great apps',
-  avatar: uiData.appViews[0].postInput.userAvatarUrl,
+  avatar: uiData.appViews[0].postInput.userAvatarUrl, // Use avatarUrl from uiData
   followers: 1234,
   following: 567
 };
-
-const mockPosts = uiData.appViews[0].feed.map(post => ({
-  id: post.postId,
-  user: {
-    username: post.author.name.toLowerCase().replace(/\s/g, ''),
-    name: post.author.name,
-    avatar: post.author.avatarUrl
-  },
-  content: post.content.text,
-  timestamp: post.timestamp,
-  likes: parseInt(post.engagement.likes),
-  replies: post.engagement.comments,
-  reposts: post.engagement.shares,
-  liked: false // This will be dynamically determined by the API
-}));
 
 // Components
 const BottomNavigation = ({ activeTab, setActiveTab }) => {
@@ -583,22 +568,22 @@ const PostCard = ({ post, onPostUpdated, type }) => {
       <CardContent className="p-4">
         <div className="flex space-x-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={post.user.avatar} />
-            <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={post.user?.avatar || post.user?.avatar_url} />
+            <AvatarFallback>{post.user?.name?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
-              <span className="font-semibold text-sm">{post.user.name}</span>
-              <span className="text-gray-300 text-sm">@{post.user.username}</span>
+              <span className="font-semibold text-sm">{post.user?.name}</span>
+              <span className="text-gray-300 text-sm">@{post.user?.username}</span>
               <span className="text-gray-300 text-sm">·</span>
               <span className="text-gray-300 text-sm">{post.timestamp}</span>
               <MoreHorizontal size={18} className="text-gray-300 ml-auto" />
             </div>
             <p className="text-sm mb-3 leading-relaxed">
-              {post.content.text}
+              {post.content?.text}
               {renderAttachment()}
             </p>
-            {type === 'question_post' && (
+            {type === 'question_post' && post.answerInput && (
               <div className="mt-3 mb-4">
                 <Input
                   type="text"
@@ -750,9 +735,24 @@ const HomeScreen = () => {
     setLoading(true);
     setError(null);
     try {
-      // For now, use mock data from JSON based on active tab
-      // In a real app, this would fetch from different API endpoints
-      setPosts(currentView.feed);
+      // Transform mock data from JSON to match PostCard's expected structure
+      const transformedPosts = currentView.feed.map(post => ({
+        id: post.postId, // Use postId from JSON for consistency with mock data
+        user: {
+          username: post.author.name.toLowerCase().replace(/\s/g, ''), // Derive username
+          name: post.author.name,
+          avatar: post.author.avatarUrl // Map avatarUrl to avatar
+        },
+        content: post.content, // Keep content as object for attachment
+        timestamp: post.timestamp,
+        likes_count: parseInt(String(post.engagement.likes).replace(/[^0-9.]/g, '')), // Ensure numeric, handle "K"
+        replies_count: post.engagement.comments,
+        reposts: post.engagement.shares,
+        is_liked: false, // Default, as mock data doesn't provide this
+        type: post.type, // Pass the type for conditional rendering in PostCard
+        answerInput: post.answerInput // Pass answerInput for Q&A posts
+      }));
+      setPosts(transformedPosts);
     } catch (err) {
       setError(err.message);
       console.error("Error fetching posts:", err);
@@ -877,7 +877,7 @@ const SearchScreen = () => {
               <div>
                 <h2 className="text-lg font-semibold mb-3">Posts</h2>
                 {searchResults.posts.map(post => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} post={post} type={post.type} />
                 ))}
               </div>
             )}

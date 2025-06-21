@@ -118,13 +118,88 @@ const BottomNavigation = ({ activeTab, setActiveTab }) => {
   );
 };
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onPostUpdated }) => {
   const [liked, setLiked] = useState(post.liked);
   const [likes, setLikes] = useState(post.likes);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [error, setError] = useState(null);
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikes(liked ? likes - 1 : likes + 1);
+  const handleLike = async () => {
+    setError(null);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError("You need to be logged in to like posts.");
+      return;
+    }
+
+    const endpoint = liked ? 'unlike' : 'like';
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/posts/${post.id}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      setLiked(!liked);
+      setLikes(liked ? likes - 1 : likes + 1);
+      if (onPostUpdated) {
+        onPostUpdated();
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error(`Error ${endpoint}ing post:`, err);
+    }
+  };
+
+  const handleReply = async () => {
+    setError(null);
+    if (!replyContent.trim()) {
+      setError("Reply content cannot be empty.");
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError("You need to be logged in to reply to posts.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/posts/${post.id}/replies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: replyContent })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      setReplyContent('');
+      setShowReplyInput(false);
+      alert('Reply posted successfully!');
+      if (onPostUpdated) {
+        onPostUpdated();
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error posting reply:", err);
+    }
+  };
+
+  const handleShare = () => {
+    alert('Share functionality not yet implemented.');
   };
 
   return (
@@ -144,7 +219,10 @@ const PostCard = ({ post }) => {
             </div>
             <p className="text-sm mb-3 leading-relaxed">{post.content}</p>
             <div className="flex items-center justify-between max-w-xs">
-              <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors">
+              <button 
+                onClick={() => setShowReplyInput(!showReplyInput)}
+                className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors"
+              >
                 <MessageCircle size={18} />
                 <span className="text-sm">{post.replies}</span>
               </button>
@@ -161,10 +239,26 @@ const PostCard = ({ post }) => {
                 <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
                 <span className="text-sm">{likes}</span>
               </button>
-              <button className="text-gray-500 hover:text-gray-700 transition-colors">
+              <button 
+                onClick={handleShare}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
                 <Share size={18} />
               </button>
             </div>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            {showReplyInput && (
+              <div className="mt-4 flex items-center space-x-2">
+                <Input
+                  type="text"
+                  placeholder="Write a reply..."
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleReply} size="sm">Reply</Button>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
@@ -174,23 +268,34 @@ const PostCard = ({ post }) => {
 
 const HomeScreen = () => {
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/posts`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setPosts(data);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching posts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/posts`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      }
-    };
-
     fetchPosts();
   }, []);
+
+  const handlePostUpdated = () => {
+    fetchPosts(); // Re-fetch posts when a post is updated (e.g., liked/unliked)
+  };
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen">
@@ -198,9 +303,17 @@ const HomeScreen = () => {
         <h1 className="text-xl font-bold text-center">Threads</h1>
       </div>
       <div className="pb-20">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {loading ? (
+          <p className="text-center text-gray-500 mt-8">Loading posts...</p>
+        ) : error ? (
+          <p className="text-center text-red-500 mt-8">Error: {error}</p>
+        ) : posts.length === 0 ? (
+          <p className="text-center text-gray-500 mt-8">No posts yet. Be the first to create one!</p>
+        ) : (
+          posts.map((post) => (
+            <PostCard key={post.id} post={post} onPostUpdated={handlePostUpdated} />
+          ))
+        )}
       </div>
     </div>
   );
@@ -369,6 +482,7 @@ const CreateScreen = ({ onPostCreated }) => {
             <div className="text-right text-sm text-gray-500 mt-2">
               {postContent.length}/500
             </div>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
         </div>
       </div>

@@ -93,20 +93,21 @@
             }
         }
 
-        // POST /users
+        // POST /users (Register)
         async function createUser() {
             const resultElementId = 'create-user-result';
             const username = document.getElementById('create-username').value;
             const email = document.getElementById('create-email').value;
+            const password = 'password123'; // Default password for testing
             if (!username || !email) {
                 displayError(resultElementId, 'Username and email cannot be empty');
                 return;
             }
             try {
-                const response = await fetch(API_BASE_URL, {
+                const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email })
+                    body: JSON.stringify({ username, email, password, name: username }) // Added name and password
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || `HTTP error! status: ${response.status}`);

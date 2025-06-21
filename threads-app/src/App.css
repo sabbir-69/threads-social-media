@@ -115,6 +115,28 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    background: linear-gradient(160deg, #11323C, #3E1E32);
+    color: white; /* Set default text color to white for better contrast on dark background */
   }
+}
+
+/* Custom Glassmorphism styles */
+.glass-post-card {
+  background-color: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+}
+
+.glass-input-field {
+  background-color: rgba(44, 62, 80, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+}
+
+.glass-bottom-nav {
+  background-color: rgba(231, 76, 60, 0.10);
+  backdrop-filter: blur(25px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
